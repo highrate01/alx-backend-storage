@@ -47,6 +47,7 @@ def call_history(method: Callable) -> Callable:
         return result
     return wrapper
 
+
 def replay(fn: Callable) -> None:
     '''
     Displays the call history of a Cache class' method.
