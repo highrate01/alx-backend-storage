@@ -2,7 +2,7 @@
 """Writing strings to Redis"""
 import redis
 import uuid
-from typing import Union, Callable
+from typing import Union, Optional, Callable
 from functools import wraps
 
 
