@@ -2,7 +2,26 @@
 """Writing strings to Redis"""
 import redis
 import uuid
-from typing import Union, Optional, Callable
+from typing import Union, Callable
+from functools import wraps
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    A decorator that count how many times a method is called
+    Args:
+        method (Callable): Method to be decorated.
+    Returns:
+        Callable: call counts in redis
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """wraps method"""
+        key = method.__qualname__
+        self._redis.incr(key)
+
+        return method(self, *args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -12,6 +31,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Stores data in redis using a random key and return the key.
@@ -27,8 +47,8 @@ class Cache:
         return key
 
     def get(self, key: str,
-            fn: Optional[Callable] = None
-            ) -> Optional[Union[str, bytes, int, float]]:
+            fn: Callable = None
+            ) -> Union[str, bytes, int, float, None]:
         """
         Retrieve data from Redis using the given key and apply conversion func
         Args:
@@ -44,7 +64,7 @@ class Cache:
             return fn(value)
         return value
 
-    def get_str(self, key: str) -> Optional[str]:
+    def get_str(self, key: str) -> Union[str, None]:
         """
         Retrieve the value associated with the key and convert it to str.
         Args:
