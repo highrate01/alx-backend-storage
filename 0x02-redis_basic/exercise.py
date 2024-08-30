@@ -121,3 +121,26 @@ class Cache:
                 'inputs': inputs,
                 'outputs': outputs
                 }
+
+def replay(method: Callable):
+    """
+    Display the history of calls of a particular function.
+
+    Args:
+        method (Callable): The method whose history is to be replayed.
+    """
+    redis_instance = method.__self__._redis
+
+    input_key = f"{method.__qualname__}:inputs"
+    output_key = f"{method.__qualname__}:outputs"
+
+    # Fetch the inputs and outputs from Redis
+    inputs = redis_instance.lrange(input_key, 0, -1)
+    outputs = redis_instance.lrange(output_key, 0, -1)
+
+    print(f"{method.__qualname__} was called {len(inputs)} times:")
+
+    for inp, outp in zip(inputs, outputs):
+        inp = inp.decode('utf-8')
+        outp = outp.decode('utf-8')
+        print(f"{method.__qualname__}(*{inp}) -> {outp}")
