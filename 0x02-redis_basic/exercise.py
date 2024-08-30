@@ -24,6 +24,30 @@ def count_calls(method: Callable) -> Callable:
     return wrapper
 
 
+def call_history(method: Callable) -> Callable:
+    """
+    decorator to store the history of inputs and outputs for a
+    particular function.
+    Args:
+        method (Callable): Method to be decorated
+    Returns:
+        Callable: call to store in redis
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """wraps method"""
+        input_key = f"{method.__qualname__}:inputs"
+        output_key = f"{method.__qualname__}:outputs"
+
+        self._redis.rpush(input_key, str(args))
+        result = method(self, *args, **kwargs)
+
+        self._redis.rpush(output_key, str(result))
+
+        return result
+    return wrapper
+
+
 class Cache:
     def __init__(self) -> None:
         """initilize the cache with a redis client
@@ -32,6 +56,7 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Stores data in redis using a random key and return the key.
@@ -83,3 +108,16 @@ class Cache:
             Optional[int]: converted value as a int or none
         """
         return self.get(key, lambda x: int(x))
+
+    def get_call_history(self, method: Callable) -> dict:
+        """Retrieves the call history of input and output"""
+        input_key = f"{method.__qualname__}:inputs"
+        output_key = f"{method.__qualname__}:outputs"
+
+        inputs = self._redis.lrange(input_key, 0, -1)
+        outputs = self._redis.lrange(output_key, 0, -1)
+
+        return {
+                'inputs': inputs,
+                'outputs': outputs
+                }
